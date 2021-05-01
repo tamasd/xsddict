@@ -13,24 +13,36 @@ const (
 	NewLineLength = 4
 )
 
+type lookup struct {
+	elementName string
+	attrName    string
+	processor   func(name string) string
+}
+
+var (
+	lookups = []lookup{
+		{"element", "name", func(name string) string { return "/" + name + ">" }},
+		{"enumeration", "value", nil},
+		{"attribute", "name", func(name string) string { return name + "=" }},
+	}
+)
+
 func GenerateDict(dict io.Writer, input io.Reader) error {
 	n, err := xmlquery.Parse(input)
 	if err != nil {
 		return err
 	}
 
-	if err = generateXmlParts(dict, n, "//xsd:element", "name", func(name string) string { return "/" + name + ">" }); err != nil {
-		return err
-	}
-
-	if err = generateXmlParts(dict, n, "//xsd:attribute", "name", func(name string) string { return name + "=" }); err != nil {
-		return err
+	for _, lookup := range lookups {
+		if err = generateXmlParts(dict, n, createXpath(lookup.elementName), lookup.attrName, lookup.processor); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func generateXmlParts(dict io.Writer, root *xmlquery.Node, query, attrName string, processName func(name string) string) error {
+func generateXmlParts(dict io.Writer, root *xmlquery.Node, query, attrName string, nameProcessor func(name string) string) error {
 	m := make(map[string]struct{})
 
 	results, err := xmlquery.QueryAll(root, query)
@@ -50,8 +62,8 @@ func generateXmlParts(dict io.Writer, root *xmlquery.Node, query, attrName strin
 
 		m[name] = struct{}{}
 
-		if processName != nil {
-			name = processName(name)
+		if nameProcessor != nil {
+			name = nameProcessor(name)
 		}
 
 		if _, err := io.WriteString(dict, name); err != nil {
@@ -76,4 +88,8 @@ func WhiteSpaces(dict io.Writer) error {
 	}
 
 	return nil
+}
+
+func createXpath(element string) string {
+	return "//xs:" + element + "|//xsd:" + element
 }

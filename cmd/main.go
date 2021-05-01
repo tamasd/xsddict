@@ -24,7 +24,7 @@ func main() {
 	xsdFile, err := os.Open(flag.Arg(0))
 	handleErr(err)
 
-	outputFile, err := os.OpenFile(flag.Arg(1), os.O_CREATE|os.O_RDWR, 0644)
+	outputFile, err := os.OpenFile(flag.Arg(1), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 	handleErr(err)
 
 	if *extra != "" {
